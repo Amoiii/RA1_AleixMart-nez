@@ -27,8 +27,9 @@ public class MyRobotController : MonoBehaviour
     public float evasionSpeed = 60.0f;
     public float recoverySpeed = 30.0f;
 
-    // --- NUEVO: Velocidad base ---
+    // --- AÑADIDO: Velocidad para mover la base ---
     public float baseMoveSpeed = 4.0f;
+    // ---------------------------------------------
 
     public bool blockManualOnCollision = true;
     public bool isBusy { get; private set; } = false;
@@ -43,20 +44,27 @@ public class MyRobotController : MonoBehaviour
     void Update()
     {
         // =================================================================
-        // 1. REQUISITO: MOVER LA BASE CON FLECHAS (Usando MyVec3)
+        // AÑADIDO: MOVIMIENTO DE LA BASE CON FLECHAS
         // =================================================================
-        float moveX = Input.GetAxis("Horizontal"); // Flechas o AD
-        float moveZ = Input.GetAxis("Vertical");   // Flechas o WS
+        float moveX = 0f;
+        float moveZ = 0f;
 
-        if (MyMath.Abs(moveX) > 0.1f || MyMath.Abs(moveZ) > 0.1f)
+        // Usamos GetKey para que SOLO las flechas muevan el robot
+        if (Input.GetKey(KeyCode.UpArrow)) moveZ = 1f;
+        if (Input.GetKey(KeyCode.DownArrow)) moveZ = -1f;
+        if (Input.GetKey(KeyCode.RightArrow)) moveX = 1f;
+        if (Input.GetKey(KeyCode.LeftArrow)) moveX = -1f;
+
+        if (moveX != 0 || moveZ != 0)
         {
-            // Usamos tu librería para calcular la dirección
+            // Usamos tu librería MyVec3
             MyVec3 dir = new MyVec3(moveX, 0, moveZ);
-            // Normalizar a mano (simple) o usar magnitud
+
+            // Normalizar
             float mag = dir.Magnitude();
             if (mag > 1f) dir = dir / mag;
 
-            // Aplicar movimiento
+            // Mover el transform
             MyVec3 moveAmount = dir * baseMoveSpeed * Time.deltaTime;
             transform.Translate(moveAmount.ToUnity(), Space.World);
         }
@@ -81,7 +89,63 @@ public class MyRobotController : MonoBehaviour
         }
     }
 
-    // AUTOMÁTICO REACTIVO (Tu lógica original que funciona bien)
+    // SENSORES FÍSICOS
+    public bool IsTouchingObject(GameObject obj)
+    {
+        Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
+        foreach (var hit in hits) if (hit.gameObject == obj) return true;
+        return false;
+    }
+
+    public bool IsInDropZone()
+    {
+        return Physics.CheckSphere(endEffectorTarget.position, touchRadius, dropZoneLayer);
+    }
+
+    // CONTROL MANUAL
+    private void ControlManual()
+    {
+        float dt = manualRotationSpeed * Time.deltaTime;
+        float b = baseAngleY, s = shoulderAngleX, e = elbowAngleX;
+        float w = wristAngleY, m = miniElbowAngleX, g = gripperAngleY;
+
+        if (Input.GetKey(KeyCode.A)) b -= dt;
+        if (Input.GetKey(KeyCode.D)) b += dt;
+        if (Input.GetKey(KeyCode.W)) s -= dt;
+        if (Input.GetKey(KeyCode.S)) s += dt;
+        if (Input.GetKey(KeyCode.Q)) e += dt;
+        if (Input.GetKey(KeyCode.E)) e -= dt;
+        if (Input.GetKey(KeyCode.Z)) w -= dt;
+        if (Input.GetKey(KeyCode.C)) w += dt;
+        if (Input.GetKey(KeyCode.R)) m += dt;
+        if (Input.GetKey(KeyCode.F)) m -= dt;
+        if (Input.GetKey(KeyCode.T)) g += dt;
+        if (Input.GetKey(KeyCode.Y)) g -= dt;
+
+        s = MyMath.Clamp(s, -100, 100);
+        e = MyMath.Clamp(e, -10, 160);
+
+        TryApplyAnglesSafely(b, s, e, w, m, g);
+    }
+
+    private void TryApplyAnglesSafely(float b, float s, float e, float w, float m, float g)
+    {
+        float oldB = baseAngleY, oldS = shoulderAngleX, oldE = elbowAngleX;
+        float oldW = wristAngleY, oldM = miniElbowAngleX, oldG = gripperAngleY;
+
+        baseAngleY = b; shoulderAngleX = s; elbowAngleX = e;
+        wristAngleY = w; miniElbowAngleX = m; gripperAngleY = g;
+        ApplyAllRotations();
+
+        if (blockManualOnCollision && CheckCollisionInternal())
+        {
+            baseAngleY = oldB; shoulderAngleX = oldS; elbowAngleX = oldE;
+            wristAngleY = oldW; miniElbowAngleX = oldM; gripperAngleY = oldG;
+            ApplyAllRotations();
+        }
+    }
+
+    //AUTOMÁTICO REACTIVO
     public void MoveToTarget(Vector3 unityTargetPos)
     {
         MyVec3 target = MyVec3.FromUnity(unityTargetPos);
@@ -94,14 +158,9 @@ public class MyRobotController : MonoBehaviour
         SyncJoints();
         float currentEvasionOffset = 0f;
 
-        // Añadimos un TimeOut de seguridad por si el robot se aleja demasiado
-        float timeOut = 8.0f;
-
-        while (timeOut > 0)
+        while (true)
         {
-            timeOut -= Time.deltaTime;
-
-            // Al leer la posición en cada frame, si mueves la base, esto se actualiza solo
+            // ALERTA: Recalculamos la posición actual en cada frame para que funcione al moverse
             MyVec3 currentPos = MyVec3.FromUnity(transform.position);
             MyVec3 dir = targetPos - currentPos;
 
@@ -109,7 +168,7 @@ public class MyRobotController : MonoBehaviour
             float idealBase = MyMath.Atan2(dir.x, dir.z) * MyMath.Rad2Deg;
             float dist = MyVec3.Distance(currentPos, targetPos);
 
-            // Heurística FK
+            // Heurística FK (La que tenías original)
             float idealShoulder = MyMath.Clamp(dist * 10f, 0, 50);
             float idealElbow = MyMath.Clamp(dist * 5f, 20, 90);
 
@@ -134,7 +193,6 @@ public class MyRobotController : MonoBehaviour
             float finalShoulder = idealShoulder + currentEvasionOffset;
 
             float dt = Time.deltaTime * autoSpeed;
-
             // Interpolación 
             baseAngleY = MyMath.LerpAngle(baseAngleY, idealBase, dt);
             shoulderAngleX = MyMath.LerpAngle(shoulderAngleX, finalShoulder, dt * 2f);
@@ -143,8 +201,8 @@ public class MyRobotController : MonoBehaviour
             ApplyAllRotations();
 
             // Condición de llegada
-            if (MyMath.Abs(baseAngleY - idealBase) < 1.5f &&
-                MyMath.Abs(shoulderAngleX - finalShoulder) < 2.5f &&
+            if (MyMath.Abs(baseAngleY - idealBase) < 1f &&
+                MyMath.Abs(shoulderAngleX - finalShoulder) < 2f &&
                 !muroEnfrente)
             {
                 break;
@@ -154,7 +212,6 @@ public class MyRobotController : MonoBehaviour
         isBusy = false;
     }
 
-    // --- RESTO DEL CÓDIGO IGUAL ---
 
     public IEnumerator MoveToPose(float[] target, float duration)
     {
@@ -194,6 +251,7 @@ public class MyRobotController : MonoBehaviour
 
     private void ApplyAllRotations()
     {
+        // Unity necesita Vector3 para los transforms, aquí hacemos la conversión final
         if (joint_0_Base) joint_0_Base.localEulerAngles = new Vector3(0, baseAngleY, 0);
         if (joint_1_Shoulder) joint_1_Shoulder.localEulerAngles = new Vector3(shoulderAngleX, 0, 0);
         if (joint_2_Elbow) joint_2_Elbow.localEulerAngles = new Vector3(elbowAngleX, 0, 0);
@@ -202,54 +260,7 @@ public class MyRobotController : MonoBehaviour
         if (joint_5_GripperRotate) joint_5_GripperRotate.localEulerAngles = new Vector3(0, gripperAngleY, 0);
     }
 
-    private void ControlManual()
-    {
-        float dt = manualRotationSpeed * Time.deltaTime;
-        float b = baseAngleY, s = shoulderAngleX, e = elbowAngleX;
-        float w = wristAngleY, m = miniElbowAngleX, g = gripperAngleY;
-
-        if (Input.GetKey(KeyCode.A)) b -= dt;
-        if (Input.GetKey(KeyCode.D)) b += dt;
-        if (Input.GetKey(KeyCode.W)) s -= dt;
-        if (Input.GetKey(KeyCode.S)) s += dt;
-        if (Input.GetKey(KeyCode.Q)) e += dt;
-        if (Input.GetKey(KeyCode.E)) e -= dt;
-        // ... resto de teclas ...
-
-        s = MyMath.Clamp(s, -100, 100);
-        e = MyMath.Clamp(e, -10, 160);
-
-        TryApplyAnglesSafely(b, s, e, w, m, g);
-    }
-
-    private void TryApplyAnglesSafely(float b, float s, float e, float w, float m, float g)
-    {
-        float oldB = baseAngleY, oldS = shoulderAngleX, oldE = elbowAngleX;
-        float oldW = wristAngleY, oldM = miniElbowAngleX, oldG = gripperAngleY;
-
-        baseAngleY = b; shoulderAngleX = s; elbowAngleX = e;
-        wristAngleY = w; miniElbowAngleX = m; gripperAngleY = g;
-        ApplyAllRotations();
-
-        if (blockManualOnCollision && CheckCollisionInternal())
-        {
-            baseAngleY = oldB; shoulderAngleX = oldS; elbowAngleX = oldE;
-            wristAngleY = oldW; miniElbowAngleX = oldM; gripperAngleY = oldG;
-            ApplyAllRotations();
-        }
-    }
-
-    private bool CheckCollisionInternal()
-    {
-        if (Hit(joint_0_Base, joint_1_Shoulder)) return true;
-        if (Hit(joint_1_Shoulder, joint_2_Elbow)) return true;
-        if (Hit(joint_2_Elbow, joint_3_Wrist)) return true;
-        if (Physics.CheckSphere(endEffectorTarget.position, 0.15f, obstacleLayer)) return true;
-        return false;
-    }
-    private bool Hit(Transform a, Transform b) => Physics.CheckCapsule(a.position, b.position, 0.1f, obstacleLayer);
-
-    // --- AGARRE Y ORIENTACIÓN (IMPORTANTE) ---
+    // AGARRE 
     private void TryGrabObject()
     {
         Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
@@ -261,13 +272,9 @@ public class MyRobotController : MonoBehaviour
         heldObject = obj;
         var rb = obj.GetComponent<Rigidbody>();
         if (rb) rb.isKinematic = true;
-
         obj.transform.SetParent(gripPoint);
         obj.transform.localPosition = Vector3.zero;
-
-        // REQUISITO CUMPLIDO: Cambiar la orientación al transportar
-        // Quaternion.identity a veces no se nota, mejor girarlo 90 grados en X
-        obj.transform.localRotation = Quaternion.Euler(90, 0, 0);
+        obj.transform.localRotation = Quaternion.identity;
     }
 
     public void ReleaseObject()
@@ -279,18 +286,15 @@ public class MyRobotController : MonoBehaviour
         heldObject = null;
     }
 
-    // Sensores
-    public bool IsTouchingObject(GameObject obj)
+    private bool CheckCollisionInternal()
     {
-        Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
-        foreach (var hit in hits) if (hit.gameObject == obj) return true;
+        if (Hit(joint_0_Base, joint_1_Shoulder)) return true;
+        if (Hit(joint_1_Shoulder, joint_2_Elbow)) return true;
+        if (Hit(joint_2_Elbow, joint_3_Wrist)) return true;
+        if (Physics.CheckSphere(endEffectorTarget.position, 0.15f, obstacleLayer)) return true;
         return false;
     }
-
-    public bool IsInDropZone()
-    {
-        return Physics.CheckSphere(endEffectorTarget.position, touchRadius, dropZoneLayer);
-    }
+    private bool Hit(Transform a, Transform b) => Physics.CheckCapsule(a.position, b.position, 0.1f, obstacleLayer);
 
     void OnDrawGizmos()
     {
