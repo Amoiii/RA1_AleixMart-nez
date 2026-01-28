@@ -27,9 +27,9 @@ public class MyRobotController : MonoBehaviour
     public float evasionSpeed = 60.0f;
     public float recoverySpeed = 30.0f;
 
-
+    
     public float baseMoveSpeed = 4.0f;
-
+ 
 
     public bool blockManualOnCollision = true;
     public bool isBusy { get; private set; } = false;
@@ -43,7 +43,7 @@ public class MyRobotController : MonoBehaviour
 
     void Update()
     {
-
+      
         float moveX = 0f;
         float moveZ = 0f;
 
@@ -65,7 +65,7 @@ public class MyRobotController : MonoBehaviour
             MyVec3 moveAmount = dir * baseMoveSpeed * Time.deltaTime;
             transform.Translate(moveAmount.ToUnity(), Space.World);
         }
-
+     
 
         if (Input.GetKeyDown(KeyCode.Alpha1)) { manualMode = true; StopAllCoroutines(); isBusy = false; Debug.Log("Modo MANUAL"); }
         if (Input.GetKeyDown(KeyCode.Alpha2)) { manualMode = false; }
@@ -86,7 +86,7 @@ public class MyRobotController : MonoBehaviour
         }
     }
 
-
+  
     public bool IsTouchingObject(GameObject obj)
     {
         Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
@@ -99,7 +99,7 @@ public class MyRobotController : MonoBehaviour
         return Physics.CheckSphere(endEffectorTarget.position, touchRadius, dropZoneLayer);
     }
 
-
+   
     private void ControlManual()
     {
         float dt = manualRotationSpeed * Time.deltaTime;
@@ -142,7 +142,7 @@ public class MyRobotController : MonoBehaviour
         }
     }
 
-
+   
     public void MoveToTarget(Vector3 unityTargetPos)
     {
         MyVec3 target = MyVec3.FromUnity(unityTargetPos);
@@ -157,7 +157,7 @@ public class MyRobotController : MonoBehaviour
 
         while (true)
         {
-
+           
             MyVec3 currentPos = MyVec3.FromUnity(transform.position);
             MyVec3 dir = targetPos - currentPos;
 
@@ -248,7 +248,7 @@ public class MyRobotController : MonoBehaviour
 
     private void ApplyAllRotations()
     {
-
+       
         if (joint_0_Base) joint_0_Base.localEulerAngles = new Vector3(0, baseAngleY, 0);
         if (joint_1_Shoulder) joint_1_Shoulder.localEulerAngles = new Vector3(shoulderAngleX, 0, 0);
         if (joint_2_Elbow) joint_2_Elbow.localEulerAngles = new Vector3(elbowAngleX, 0, 0);
@@ -257,7 +257,7 @@ public class MyRobotController : MonoBehaviour
         if (joint_5_GripperRotate) joint_5_GripperRotate.localEulerAngles = new Vector3(0, gripperAngleY, 0);
     }
 
-
+   
     private void TryGrabObject()
     {
         Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
@@ -271,7 +271,7 @@ public class MyRobotController : MonoBehaviour
         if (rb) rb.isKinematic = true;
         obj.transform.SetParent(gripPoint);
         obj.transform.localPosition = Vector3.zero;
-        obj.transform.localRotation = Quaternion.identity;
+        obj.transform.localEulerAngles = new Vector3(90, 0, 0);
     }
 
     public void ReleaseObject()
