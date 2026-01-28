@@ -27,9 +27,9 @@ public class MyRobotController : MonoBehaviour
     public float evasionSpeed = 60.0f;
     public float recoverySpeed = 30.0f;
 
-    // --- AÑADIDO: Velocidad para mover la base ---
+
     public float baseMoveSpeed = 4.0f;
-    // ---------------------------------------------
+
 
     public bool blockManualOnCollision = true;
     public bool isBusy { get; private set; } = false;
@@ -43,13 +43,10 @@ public class MyRobotController : MonoBehaviour
 
     void Update()
     {
-        // =================================================================
-        // AÑADIDO: MOVIMIENTO DE LA BASE CON FLECHAS
-        // =================================================================
+
         float moveX = 0f;
         float moveZ = 0f;
 
-        // Usamos GetKey para que SOLO las flechas muevan el robot
         if (Input.GetKey(KeyCode.UpArrow)) moveZ = 1f;
         if (Input.GetKey(KeyCode.DownArrow)) moveZ = -1f;
         if (Input.GetKey(KeyCode.RightArrow)) moveX = 1f;
@@ -68,7 +65,7 @@ public class MyRobotController : MonoBehaviour
             MyVec3 moveAmount = dir * baseMoveSpeed * Time.deltaTime;
             transform.Translate(moveAmount.ToUnity(), Space.World);
         }
-        // =================================================================
+
 
         if (Input.GetKeyDown(KeyCode.Alpha1)) { manualMode = true; StopAllCoroutines(); isBusy = false; Debug.Log("Modo MANUAL"); }
         if (Input.GetKeyDown(KeyCode.Alpha2)) { manualMode = false; }
@@ -89,7 +86,7 @@ public class MyRobotController : MonoBehaviour
         }
     }
 
-    // SENSORES FÍSICOS
+
     public bool IsTouchingObject(GameObject obj)
     {
         Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
@@ -102,7 +99,7 @@ public class MyRobotController : MonoBehaviour
         return Physics.CheckSphere(endEffectorTarget.position, touchRadius, dropZoneLayer);
     }
 
-    // CONTROL MANUAL
+
     private void ControlManual()
     {
         float dt = manualRotationSpeed * Time.deltaTime;
@@ -145,7 +142,7 @@ public class MyRobotController : MonoBehaviour
         }
     }
 
-    //AUTOMÁTICO REACTIVO
+
     public void MoveToTarget(Vector3 unityTargetPos)
     {
         MyVec3 target = MyVec3.FromUnity(unityTargetPos);
@@ -160,7 +157,7 @@ public class MyRobotController : MonoBehaviour
 
         while (true)
         {
-            // ALERTA: Recalculamos la posición actual en cada frame para que funcione al moverse
+
             MyVec3 currentPos = MyVec3.FromUnity(transform.position);
             MyVec3 dir = targetPos - currentPos;
 
@@ -168,7 +165,7 @@ public class MyRobotController : MonoBehaviour
             float idealBase = MyMath.Atan2(dir.x, dir.z) * MyMath.Rad2Deg;
             float dist = MyVec3.Distance(currentPos, targetPos);
 
-            // Heurística FK (La que tenías original)
+            // Heurística FK 
             float idealShoulder = MyMath.Clamp(dist * 10f, 0, 50);
             float idealElbow = MyMath.Clamp(dist * 5f, 20, 90);
 
@@ -251,7 +248,7 @@ public class MyRobotController : MonoBehaviour
 
     private void ApplyAllRotations()
     {
-        // Unity necesita Vector3 para los transforms, aquí hacemos la conversión final
+
         if (joint_0_Base) joint_0_Base.localEulerAngles = new Vector3(0, baseAngleY, 0);
         if (joint_1_Shoulder) joint_1_Shoulder.localEulerAngles = new Vector3(shoulderAngleX, 0, 0);
         if (joint_2_Elbow) joint_2_Elbow.localEulerAngles = new Vector3(elbowAngleX, 0, 0);
@@ -260,7 +257,7 @@ public class MyRobotController : MonoBehaviour
         if (joint_5_GripperRotate) joint_5_GripperRotate.localEulerAngles = new Vector3(0, gripperAngleY, 0);
     }
 
-    // AGARRE 
+
     private void TryGrabObject()
     {
         Collider[] hits = Physics.OverlapSphere(endEffectorTarget.position, touchRadius, grabbableLayer);
