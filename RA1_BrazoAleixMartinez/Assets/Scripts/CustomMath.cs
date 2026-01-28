@@ -41,7 +41,7 @@ public static class MyMath
         return val;
     }
 
-    // Interpolaciones propias
+    // Interpolaciones
     public static float Lerp(float a, float b, float t)
     {
         if (t < 0) t = 0; if (t > 1) t = 1;
