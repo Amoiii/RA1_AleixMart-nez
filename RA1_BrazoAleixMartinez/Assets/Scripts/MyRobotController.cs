@@ -27,7 +27,7 @@ public class MyRobotController : MonoBehaviour
     public float evasionSpeed = 60.0f;
     public float recoverySpeed = 30.0f;
 
-    // Velocidad base
+   
     public float baseMoveSpeed = 4.0f;
 
     public bool blockManualOnCollision = true;
@@ -35,7 +35,7 @@ public class MyRobotController : MonoBehaviour
     public bool manualMode = true;
     private GameObject heldObject = null;
 
-    // Almacenamos los ángulos de cada joint para aplicar FK 
+    // Almacenamos los angulos para FK 
     private float baseAngleY, shoulderAngleX, elbowAngleX, wristAngleY, miniElbowAngleX, gripperAngleY;
 
     void Awake() => SyncJoints();
@@ -100,19 +100,19 @@ public class MyRobotController : MonoBehaviour
 
         while (true)
         {
-            // Actualizamos posición actual en cada frame para soportar movimiento de la base
+            
             MyVec3 currentPos = MyVec3.FromUnity(transform.position);
             MyVec3 dir = targetPos - currentPos;
 
-            // Calculamos ángulo base usando arcotangente (trigonometría básica)
+            // Calculamos ángulo base
             float idealBase = MyMath.Atan2(dir.x, dir.z) * MyMath.Rad2Deg;
             float dist = MyVec3.Distance(currentPos, targetPos);
 
-            // Heurística simple para FK: ajustamos ángulos según distancia al target
+            // HeurísticaFK
             float idealShoulder = MyMath.Clamp(dist * 10f, 0, 50);
             float idealElbow = MyMath.Clamp(dist * 5f, 20, 90);
 
-            // Detección de obstáculos con Raycast
+            // DetecciónRaycast
             bool muroEnfrente = Physics.Linecast(endEffectorTarget.position, targetPos.ToUnity(), obstacleLayer);
 
             if (muroEnfrente)
@@ -137,10 +137,10 @@ public class MyRobotController : MonoBehaviour
             shoulderAngleX = MyMath.LerpAngle(shoulderAngleX, finalShoulder, dt * 2f);
             elbowAngleX = MyMath.LerpAngle(elbowAngleX, idealElbow, dt);
 
-            // Aplicamos los ángulos calculados a los joints
+            // Aplicamos los ángulos
             ApplyAllRotations();
 
-            // Comprobamos si hemos con margen de error pequeño
+            //llegada con margen
             if (MyMath.Abs(baseAngleY - idealBase) < 1f &&
                 MyMath.Abs(shoulderAngleX - finalShoulder) < 2f &&
                 !muroEnfrente)
@@ -270,7 +270,7 @@ public class MyRobotController : MonoBehaviour
 
         ApplyAllRotations();
 
-        // Si colisionamos, revertimos al estado anterior
+        // revertir si hay colision
         if (blockManualOnCollision && CheckCollisionInternal())
         {
             baseAngleY = oldB; shoulderAngleX = oldS; elbowAngleX = oldE;
