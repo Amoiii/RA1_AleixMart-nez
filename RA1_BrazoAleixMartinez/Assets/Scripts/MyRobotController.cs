@@ -42,6 +42,9 @@ public class MyRobotController : MonoBehaviour
     private float miniElbowAngleX = 0f;
     private float gripperAngleY = 0f;
 
+
+    public float GetBaseAngle() => baseAngleY;
+
     void Awake()
     {
          ApplyAllRotations();

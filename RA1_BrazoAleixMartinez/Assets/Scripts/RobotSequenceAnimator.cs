@@ -56,18 +56,12 @@ public class RobotSequenceAnimator : MonoBehaviour
         while (bot.isBusy) yield return null;
 
 
-
-
-
-
-        float currentBase = bot.joint_0_Base.localEulerAngles.y;
-
-
-       
+      
+        float currentBase = bot.GetBaseAngle();
 
         // Girar el objeto 
         float[] poseGiroA = { currentBase, -30f, 45f, 0f, 45f, 90f };
-        yield return StartCoroutine(bot.MoveToPose(poseGiroA, 1.0f)); 
+        yield return StartCoroutine(bot.MoveToPose(poseGiroA, 1.0f));
 
 
         float[] poseGiroB = { currentBase, -30f, 45f, 0f, 45f, -90f };
@@ -79,10 +73,8 @@ public class RobotSequenceAnimator : MonoBehaviour
 
         yield return new WaitForSeconds(0.2f);
 
-
-
         // 5. ENTREGA
-       
+
         Vector3 dropHoverPos = dropZone.position + Vector3.up * alturaHover;
         bot.MoveToTarget(dropHoverPos);
         while (bot.isBusy) yield return null;
