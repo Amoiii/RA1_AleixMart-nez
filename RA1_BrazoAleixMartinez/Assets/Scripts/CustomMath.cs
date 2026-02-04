@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+// Estructura vectorial propia
 [System.Serializable]
 public struct MyVec3
 {
@@ -23,9 +24,26 @@ public struct MyVec3
     public static float Distance(MyVec3 a, MyVec3 b) => (a - b).Magnitude();
 }
 
+// NUEVO: Estructura Quaterniones
+
+[System.Serializable]
+public struct MyQuat
+{
+    public float x, y, z, w;
+
+    public MyQuat(float x, float y, float z, float w)
+    {
+        this.x = x; this.y = y; this.z = z; this.w = w;
+    }
+
+    // Solo usamos Unity al final para pasar al Transform
+    public Quaternion ToUnity() => new Quaternion(x, y, z, w);
+}
+
 public static class MyMath
 {
     public const float PI = 3.14159265f;
+    public const float Deg2Rad = PI / 180f; 
     public const float Rad2Deg = 180f / PI;
 
     public static float Sin(float rad) => (float)Math.Sin(rad);
@@ -47,12 +65,33 @@ public static class MyMath
         if (t < 0) t = 0; if (t > 1) t = 1;
         return a + (b - a) * t;
     }
-    //lerp
+
     public static float LerpAngle(float a, float b, float t)
     {
         float diff = b - a;
         while (diff > 180) diff -= 360;
         while (diff < -180) diff += 360;
         return a + diff * t;
+    }
+
+    //Propia libreria de euler
+    public static MyQuat Euler(float x, float y, float z)
+    {
+        // 1 Convertir a radianes y dividir por 2
+        float cx = Cos(x * Deg2Rad * 0.5f);
+        float sx = Sin(x * Deg2Rad * 0.5f);
+        float cy = Cos(y * Deg2Rad * 0.5f);
+        float sy = Sin(y * Deg2Rad * 0.5f);
+        float cz = Cos(z * Deg2Rad * 0.5f);
+        float sz = Sin(z * Deg2Rad * 0.5f);
+
+        // 2 Construir el Cuaternión 
+        MyQuat q;
+        q.w = cx * cy * cz + sx * sy * sz;
+        q.x = sx * cy * cz - cx * sy * sz;
+        q.y = cx * sy * cz + sx * cy * sz;
+        q.z = cx * cy * sz - sx * sy * cz;
+
+        return q;
     }
 }
