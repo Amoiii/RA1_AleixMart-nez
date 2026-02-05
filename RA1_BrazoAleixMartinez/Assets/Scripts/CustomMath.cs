@@ -24,9 +24,8 @@ public struct MyVec3
     public static float Distance(MyVec3 a, MyVec3 b) => (a - b).Magnitude();
 }
 
-// NUEVO: Estructura Quaterniones
+//Estructura Quaterniones
 
-[System.Serializable]
 public struct MyQuat
 {
     public float x, y, z, w;
